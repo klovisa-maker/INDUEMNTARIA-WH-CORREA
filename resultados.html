@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resultados de la votación</title>
+<style>
+:root{--bg:#F6F7F9;--card:#FFFFFF;--fg:#1A2433;--muted:#5B6879;--line:#D9DEE5;--c1:#EA571D;--c2:#1A365F;--navy:#1A365F;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#121A26;--card:#1A2536;--fg:#EAF0F7;--muted:#9DAABB;--line:#2C3A50;--c1:#FF7A45;--c2:#7FA9E0;--navy:#9CC0F0;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,"Segoe UI",sans-serif;padding:32px 16px}
+main{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-size:1.6rem;margin:0;color:var(--navy)}
+h2{font-size:1.05rem;margin:0 0 12px;color:var(--navy)}
+h3{font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:8px 0 -4px}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--c1);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.chart{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.chart svg{flex:none}
+.leg{display:flex;flex-direction:column;gap:8px;min-width:0;flex:1 1 120px}
+.leg div{display:flex;align-items:center;gap:8px;font-size:.9rem}
+.leg i{width:12px;height:12px;border-radius:3px;flex:none}
+.leg b{font-variant-numeric:tabular-nums;margin-left:auto;white-space:nowrap}
+.muted{color:var(--muted);font-size:.9rem}
+.vacio{color:var(--muted);font-size:.9rem;padding:12px 0}
+.kpi{font-size:2.4rem;font-weight:800;color:var(--navy);line-height:1}
+.brow{margin-bottom:14px}
+.btop{display:flex;justify-content:space-between;gap:10px;font-size:.95rem;margin-bottom:5px}
+.btop b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.bbar{height:16px;border-radius:8px;background:var(--line);overflow:hidden}
+.bbar i{display:block;height:100%;border-radius:8px}
+.gana{color:var(--c1);font-weight:700}
+</style></head><body>
+<main>
+  <header><div class="eyebrow">W.H. Correa &amp; Asociados · solo para vos</div><h1>Resultados de la votación</h1><div class="muted" id="tot">Cargando…</div></header>
+  <div id="out"></div>
+</main>
+<script src="config.js"></script>
+<script>
+const clave=new URLSearchParams(location.search).get('clave')||'';
+const COL=['var(--c1)','var(--c2)','#8A9BB5'];
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const NS='http://www.w3.org/2000/svg';
+const NOM={mujer:'Mujer',hombre:'Hombre',campera:'Campera',pullover:'Pullover',azul:'Azul marino',crema:'Crema',
+ p1:'Par 1 · Interior blanco y blusa en V',p2:'Par 2 · Interior azul marino y blusa en V',p3:'Par 3 · Con vivo naranja',p4:'Par 4 · Interior azul marino y blusa con vivo',v:'Escote en V',cuadrado:'Escote cuadrado',camisero:'Cuello camisero',larga:'Manga larga',corta:'Manga corta',si:'Sí, compraría la otra',no:'No compraría la otra'};
+function donut(items,total,cols){
+  const R=52,C=2*Math.PI*R,svg=document.createElementNS(NS,'svg');
+  svg.setAttribute('viewBox','0 0 140 140');svg.setAttribute('width','140');svg.setAttribute('height','140');
+  svg.setAttribute('role','img');svg.setAttribute('aria-label','Gráfico de torta');
+  const bg=document.createElementNS(NS,'circle');
+  [['cx',70],['cy',70],['r',R],['fill','none'],['stroke','var(--line)'],['stroke-width',22]].forEach(([k,v])=>bg.setAttribute(k,v));svg.append(bg);
+  let acc=0;
+  if(total)items.forEach(([t,n],i)=>{
+    if(!n)return;const len=n/total*C,c=document.createElementNS(NS,'circle');
+    [['cx',70],['cy',70],['r',R],['fill','none'],['stroke-width',22],
+     ['stroke-dasharray',len+' '+(C-len)],['stroke-dashoffset',-acc],['transform','rotate(-90 70 70)']].forEach(([k,v])=>c.setAttribute(k,v));
+    c.setAttribute('stroke',(cols||COL)[i%(cols||COL).length]);svg.append(c);acc+=len;});
+  const tx=document.createElementNS(NS,'text');
+  [['x',70],['y',76],['text-anchor','middle'],['font-size',22],['font-weight',800],['fill','var(--fg)']].forEach(([k,v])=>tx.setAttribute(k,v));
+  tx.textContent=total;svg.append(tx);return svg;
+}
+function barras(titulo,items){
+  const c=el('div','card');c.append(el('h2',null,titulo));
+  const total=items.reduce((a,i)=>a+i[1],0),max=Math.max(0,...items.map(i=>i[1]));
+  if(!total){c.append(el('div','vacio','Sin votos todavía.'));return c}
+  const lideres=items.filter(i=>i[1]===max).length;
+  [...items].sort((a,b)=>b[1]-a[1]).forEach(([t,n])=>{
+    const lider=n===max;
+    const f=el('div','brow'),top=el('div','btop'),nom=el('span',lider?'gana':null,t+(lider?(lideres>1?' · empate':' · va ganando'):''));
+    top.append(nom,el('b',null,n+' · '+Math.round(n/total*100)+'%'));
+    const bar=el('div','bbar'),fill=el('i');fill.style.width=(max?n/max*100:0)+'%';fill.style.background=lider?'var(--c1)':'var(--c2)';
+    bar.append(fill);f.append(top,bar);c.append(f)});
+  return c;
+}
+function bloque(titulo,items,cols){
+  const c=el('div','card');c.append(el('h2',null,titulo));
+  const total=items.reduce((a,i)=>a+i[1],0);
+  if(!total){c.append(el('div','vacio','Sin votos todavía.'));return c}
+  const w=el('div','chart');w.append(donut(items,total,cols));
+  const l=el('div','leg');
+  items.forEach(([t,n],i)=>{const d=el('div');const sw=el('i');sw.style.background=(cols||COL)[i%(cols||COL).length];if(cols)sw.style.border='1px solid var(--line)';
+    d.append(sw,el('span',null,t),el('b',null,n+' · '+Math.round(n/total*100)+'%'));l.append(d)});
+  w.append(l);c.append(w);return c;
+}
+async function cargar(){
+  const out=document.getElementById('out');
+  try{
+    const r=await fetch(URL_VOTOS+'?accion=resultados&clave='+encodeURIComponent(clave),{cache:'no-store'});
+    if(!r.ok){document.getElementById('tot').textContent='Clave incorrecta. Usá el link completo que muestra la ventana del servidor.';return}
+    const j=await r.json();
+    document.getElementById('tot').textContent=j.total+(j.total===1?' persona votó':' personas votaron')+' · se actualiza solo';
+    out.innerHTML='';
+    const g=k=>j.genero[k]||0;
+    const col=(p)=>['azul','crema'].map(c=>[NOM[c],j.color[p][c]||0]);const CC=['#2B4C80','#E8D9B5'];
+    const wrap=el('div');wrap.style.cssText='display:flex;flex-direction:column;gap:16px';
+    wrap.append(el('h3',null,'Lo que va ganando'));const gg=el('div','grid');
+    gg.append(barras('¿Qué par va ganando?',['1','2','3','4'].map(i=>[NOM['p'+i],(j.par[i]||0)])),barras('¿Qué cuello prefieren las mujeres?',['v','cuadrado','camisero'].map(c=>[NOM[c],(j.cuello[c]||0)])));wrap.append(gg);
+    wrap.append(el('h3',null,'Participación'),(()=>{const gr=el('div','grid');gr.append(bloque('Quiénes votaron',[[NOM.mujer,g('mujer')],[NOM.hombre,g('hombre')]]));return gr})());
+    wrap.append(el('h3',null,'Par elegido'));
+    const g2=el('div','grid');
+    const par=o=>['1','2','3','4'].map(i=>[NOM['p'+i],(o[i]||0)]);
+    g2.append(bloque('Par elegido · todos',par(j.par)),bloque('Par elegido · mujeres',par(j.par_genero.mujer)),bloque('Par elegido · hombres',par(j.par_genero.hombre)));
+    wrap.append(g2);
+    wrap.append(el('h3',null,'Mujeres: conjunto y cuello elegido'));const gc=el('div','grid');
+    ['1','2','3','4'].forEach(p=>gc.append(bloque(NOM['p'+p]+' · cuello',['v','cuadrado','camisero'].map(c=>[NOM[c],(j.par_cuello[p]||{})[c]||0]),['var(--c1)','var(--c2)','#8A9BB5'])));wrap.append(gc);
+    wrap.append(el('h3',null,'Manga'));const gm=el('div','grid');gm.append(bloque('Manga · mujeres',['larga','corta'].map(m=>[NOM[m],j.manga.mujer[m]||0])),bloque('Manga · hombres',['larga','corta'].map(m=>[NOM[m],j.manga.hombre[m]||0])),bloque('Si el estudio cubre una, ¿compraría la otra?',['si','no'].map(m=>[NOM[m],j.otra[m]||0])));wrap.append(gm);
+    wrap.append(el('h3',null,'Invierno'));
+    const g3=el('div','grid');
+    g3.append(bloque('Pullover o campera',['pullover','campera'].map(p=>[NOM[p],j.prenda[p]||0])),
+              bloque('Color de la campera',col('campera'),CC),
+              bloque('Color del pullover',col('pullover'),CC));
+    wrap.append(g3);out.append(wrap);
+  }catch(e){document.getElementById('tot').textContent='Sin conexión con el servidor.'}
+}
+cargar();setInterval(cargar,10000);
+</script>
+</body></html>

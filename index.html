@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Votación de indumentaria</title>
+<style>
+:root{--bg:#F6F7F9;--card:#FFFFFF;--fg:#1A2433;--muted:#5B6879;--line:#D9DEE5;--accent:#EA571D;--navy:#1A365F;--ok:#2E7D4F;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#121A26;--card:#1A2536;--fg:#EAF0F7;--muted:#9DAABB;--line:#2C3A50;--accent:#FF7A45;--navy:#9CC0F0;--ok:#5CC08A;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,"Segoe UI",sans-serif;padding:32px 16px}
+main{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+h1{font-size:1.7rem;line-height:1.2;margin:0;text-wrap:balance;color:var(--navy)}
+h2{font-size:1.25rem;margin:0;color:var(--navy);text-wrap:balance}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.sub{color:var(--muted);margin:4px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:16px}
+.big{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:16px}
+button.pick{font:inherit;font-size:1.3rem;font-weight:700;color:var(--navy);background:var(--card);border:2px solid var(--line);border-radius:12px;padding:36px 16px;cursor:pointer}
+button.pick:hover{border-color:var(--accent)}
+button.pick small{display:block;font-weight:400;font-size:.9rem;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.card.mine{border-color:var(--ok)}
+.imgs{display:flex;flex-direction:column}
+.card img{width:100%;display:block;cursor:zoom-in;background:#222}
+.cb{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.cb h3{margin:0;font-size:1rem}
+.cb p{margin:0;color:var(--muted);font-size:.9rem}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);transition:width .4s}
+.res{font-variant-numeric:tabular-nums;font-size:.9rem;color:var(--muted)}
+button.v{font:inherit;font-weight:700;padding:11px 16px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+.card.mine button.v{background:var(--ok)}
+button.link{font:inherit;background:none;border:0;color:var(--muted);cursor:pointer;text-decoration:underline;padding:0;align-self:flex-start}
+button:focus-visible,.card img:focus-visible{outline:3px solid var(--navy);outline-offset:2px}
+.msg{font-size:.9rem;color:var(--muted);min-height:1.4em}
+.sum{background:var(--card);border:2px solid var(--ok);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.sum b{color:var(--navy)}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+button.pri{font:inherit;font-weight:700;padding:12px 18px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+#lb{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;cursor:zoom-out}
+#lb img{max-width:100%;max-height:100%;border-radius:8px}
+</style></head><body>
+<main>
+  <header>
+    <div class="eyebrow">W.H. Correa &amp; Asociados</div>
+    <h1>Votación de indumentaria</h1>
+    <div class="msg" id="msg" role="status"></div>
+  </header>
+  <div id="paso"></div>
+</main>
+<script src="config.js"></script>
+<script>
+const IMG={b1:"img/b1.jpg",c1:"img/c1.jpg",c2:"img/c2.jpg",c3:"img/c3.jpg",n1:"img/n1.jpg",
+ s_v:"img/s_v.jpg",s_cuad:"img/s_cuad.jpg",s_cam:"img/s_cam.jpg",v_v:"img/v_v.jpg",v_cuad:"img/v_cuad.jpg",v_cam:"img/v_cam.jpg",
+ ca:"img/ca.jpg",cc:"img/cc.jpg",pa:"img/pa.jpg",pc:"img/pc.jpg"};
+const PARES=[
+ {id:"1",t:"Par 1 · Camisa de interior blanco y blusa en V",d:"Camisa blanca de cuello blanco y blusa con escote en V, sin vivo de color.",imgs:["b1","c1"]},
+ {id:"2",t:"Par 2 · Camisa de interior azul marino y blusa en V",d:"Camisa blanca con cuello y puño interior azul marino y blusa con escote en V, sin vivo de color.",imgs:["b1","c3"]},
+ {id:"3",t:"Par 3 · Con vivo naranja",d:"Camisa con vivo naranja en la botonera e interior azul marino, y blusa con vivo naranja en el escote.",imgs:["n1","c2"]},
+ {id:"4",t:"Par 4 · Camisa de interior azul marino y blusa con vivo naranja",d:"Camisa blanca con cuello y puño interior azul marino, sin vivo, y blusa con vivo naranja en el escote.",imgs:["n1","c3"]}
+];
+const CUELLOS_SIN=[{id:"v",img:"s_v",t:"Escote en V",d:"Escote en V, sin vivo. Se ve en manga larga y sin mangas."},
+                   {id:"cuadrado",img:"s_cuad",t:"Escote cuadrado",d:"Escote cuadrado, sin vivo. Se ve en manga larga y sin mangas."},
+                   {id:"camisero",img:"s_cam",t:"Cuello camisero",d:"Cuello camisero, sin vivo. Se ve en manga larga y sin mangas."}];
+const CUELLOS_CON=[{id:"v",img:"v_v",t:"Escote en V",d:"Escote en V con vivo naranja. Se ve en manga larga y sin mangas."},
+                   {id:"cuadrado",img:"v_cuad",t:"Escote cuadrado",d:"Escote cuadrado con vivo naranja. Se ve en manga larga y sin mangas."},
+                   {id:"camisero",img:"v_cam",t:"Cuello camisero",d:"Cuello camisero con vivo naranja. Se ve en manga larga y sin mangas."}];
+const cuellosDe=par=>(par==='3'||par==='4')?CUELLOS_CON:CUELLOS_SIN;
+const MANGAS=[{id:"larga",t:"Manga larga"},{id:"corta",t:"Manga corta"}];
+const OTRA=[{id:"si",t:"Sí, compraría la otra"},{id:"no",t:"No, solo usaría la que cubra el estudio"}];
+const PRENDAS=[{id:"campera",t:"Campera",d:"Campera de punto con cierre, cuello alto y vivo naranja en los puños.",imgs:[]},
+               {id:"pullover",t:"Pullover",d:"Pullover cuello redondo, con vivo naranja en puños y ribete.",imgs:[]}];
+const COLORES={campera:[{id:"azul",img:"ca",t:"Azul marino"},{id:"crema",img:"cc",t:"Crema"}],
+               pullover:[{id:"azul",img:"pa",t:"Azul marino"},{id:"crema",img:"pc",t:"Crema"}]};
+const $=id=>document.getElementById(id);
+const msg=t=>{$('msg').textContent=t||''};
+const lb=src=>{const d=document.createElement('div');d.id='lb';const i=document.createElement('img');i.src=src;d.append(i);d.onclick=()=>d.remove();document.body.append(d)};
+const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
+function nuevoToken(){let s='';for(let i=0;i<32;i++)s+=Math.floor(Math.random()*16).toString(16);return s}
+window.addEventListener('error',e=>{const m=document.getElementById('msg');if(m)m.textContent='Error en la página: '+e.message});
+let token;try{token=localStorage.getItem('votoToken');if(!token){token=nuevoToken();localStorage.setItem('votoToken',token)}}catch(e){token=nuevoToken()}
+async function apiMio(){const r=await fetch(URL_VOTOS+'?accion=mio&token='+token,{cache:'no-store'});return r.json()}
+async function apiVotar(patch){const r=await fetch(URL_VOTOS+'?accion=votar&token='+token+'&patch='+encodeURIComponent(JSON.stringify(patch)),{cache:'no-store'});if(!r.ok)throw new Error()}
+let mine={},paso='genero';
+async function cargar(){
+  try{const j=await apiMio();mine=j.mio||{};msg('')}
+  catch(e){msg('Sin conexión con el servidor. Reintentando…')}
+}
+async function guardar(patch,sig){
+  try{await apiVotar(patch);await cargar();if(sig)paso=sig;render()}
+  catch(e){msg('No se pudo registrar el voto. Probá de nuevo.')}
+}
+const esMujer=()=>mine.genero==='mujer';
+function volver(a){const b=el('button','link','← Volver');b.onclick=()=>{paso=a;render()};return b}
+function card(o,activo,onVote,label){
+  const c=el('div','card'+(activo?' mine':''));
+  const w=el('div','imgs');
+  o.imgs.forEach(k=>{const im=el('img');im.src=IMG[k];im.alt=o.t;im.tabIndex=0;im.onclick=()=>lb(IMG[k]);im.onkeydown=e=>{if(e.key==='Enter')lb(IMG[k])};w.append(im)});
+  const b=el('div','cb');
+  const bt=el('button','v',activo?'Tu voto ✓':label);bt.type='button';bt.onclick=onVote;
+  b.append(el('h3',null,o.t));if(o.d)b.append(el('p',null,o.d));
+  b.append(bt);
+  c.append(w,b);return c;
+}
+function imgManga(){
+  if(esMujer()){
+    const lista=cuellosDe(mine.par);
+    return (lista.find(x=>x.id===mine.cuello)||lista[0]).img;
+  }
+  return ({'1':'c1','2':'c3','3':'c2','4':'c3'})[mine.par]||'c1';
+}
+function render(){
+  const p=$('paso');p.innerHTML='';
+  const wrap=el('div');wrap.style.cssText='display:flex;flex-direction:column;gap:18px';
+  if(paso==='genero'){
+    wrap.append(el('h2',null,'¿Sos mujer o hombre?'));
+    const g=el('div','big');
+    [['mujer','Mujer','Blusa e invierno'],['hombre','Hombre','Camisa e invierno']].forEach(([id,t,s])=>{
+      const b=el('button','pick',t);b.type='button';b.append(el('small',null,s));
+      b.onclick=()=>guardar(id===mine.genero?{}:{genero:id,cuello:null},'par');g.append(b)});
+    wrap.append(g);
+  }else if(paso==='par'){
+    wrap.append(volver('genero'),el('h2',null,'Elegí el par que más te gusta'),el('p','sub','Cada par combina la blusa y la camisa. Tocá la imagen para verla grande.'));
+    const g=el('div','grid');
+    PARES.forEach(o=>g.append(card(o,mine.par===o.id,()=>guardar(o.id===mine.par?{}:{par:o.id,cuello:null},esMujer()?'cuello':'manga'),'Elegir este par')));
+    wrap.append(g);
+  }else if(paso==='cuello'){
+    wrap.append(volver('par'),el('h2',null,'¿Qué tipo de cuello preferís para la blusa?'),el('p','sub','Tocá la imagen para verla grande.'));
+    const g=el('div','grid');
+    cuellosDe(mine.par).forEach(o=>g.append(card({...o,imgs:[o.img]},mine.cuello===o.id,()=>guardar({cuello:o.id},'manga'),'Elegir este cuello')));
+    wrap.append(g);
+  }else if(paso==='manga'){
+    const k=mine.genero;
+    wrap.append(volver(esMujer()?'cuello':'par'),el('h2',null,k==='mujer'?'¿Preferís la blusa de manga larga o manga corta?':'¿Preferís la camisa de manga larga o manga corta?'));
+    if(k==='mujer')wrap.append(el('p','sub','En las blusas, la versión corta es sin mangas.'));
+    const key=imgManga();
+    const im=el('img');im.src=IMG[key];im.alt='Prenda elegida';im.style.cssText='max-width:560px;width:100%;border-radius:10px;cursor:zoom-in';im.onclick=()=>lb(IMG[key]);wrap.append(im);
+    const g=el('div','big');
+    MANGAS.forEach(m=>{const b=el('button','pick',(mine.manga===m.id?'✓ ':'')+m.t);b.type='button';b.onclick=()=>guardar({manga:m.id},'otra');g.append(b)});
+    wrap.append(g);
+  }else if(paso==='otra'){
+    wrap.append(volver('manga'),el('h2',null,'Si el estudio cubre una sola versión (manga larga o manga corta), ¿comprarías vos la otra?'));
+    const g=el('div','big');
+    OTRA.forEach(m=>{const b=el('button','pick',(mine.otra===m.id?'✓ ':'')+m.t);b.type='button';b.onclick=()=>guardar({otra:m.id},'prenda');g.append(b)});
+    wrap.append(g);
+  }else if(paso==='prenda'){
+    wrap.append(volver('otra'),el('h2',null,'Ahora invierno: ¿pullover o campera?'));
+    const g=el('div','grid');
+    PRENDAS.forEach(o=>g.append(card(o,mine.prenda===o.id,()=>guardar(o.id===mine.prenda?{}:{prenda:o.id,color:null},'color'),'Prefiero '+o.t.toLowerCase())));
+    wrap.append(g);
+  }else if(paso==='color'){
+    const pr=mine.prenda;const nom=pr==='campera'?'la campera':'el pullover';
+    wrap.append(volver('prenda'),el('h2',null,'¿En qué color preferís '+nom+'?'));
+    const g=el('div','grid');
+    COLORES[pr].forEach(o=>g.append(card({t:o.t,imgs:[o.img]},mine.color===o.id,()=>guardar({color:o.id},'fin'),'Votar '+o.t.toLowerCase())));
+    wrap.append(g);
+  }else{
+    wrap.append(el('h2',null,'¡Gracias por votar!'));
+    const s=el('div','sum');
+    s.append(el('div','res','Tu voto quedó registrado. Estas son tus elecciones:'));
+    const L=(a,b)=>{const d=el('div');d.append(el('b',null,a+': '),document.createTextNode(b));s.append(d)};
+    if(mine.genero)L('Perfil',esMujer()?'Mujer':'Hombre');
+    if(mine.par){const o=PARES.find(x=>x.id===mine.par);if(o)L('Par',o.t)}
+    if(mine.cuello&&esMujer()){const o=cuellosDe(mine.par).find(x=>x.id===mine.cuello);if(o)L('Cuello',o.t)}
+    if(mine.manga)L('Manga',(MANGAS.find(x=>x.id===mine.manga)||{}).t||'');
+    if(mine.otra)L('Compraría la otra versión',mine.otra==='si'?'Sí':'No');
+    if(mine.prenda){const o=PRENDAS.find(x=>x.id===mine.prenda);const c=(COLORES[mine.prenda].find(x=>x.id===mine.color)||{}).t;L('Invierno',o.t+(c?' · '+c:''))}
+    wrap.append(s);
+    const r=el('div','row');
+    const b1=el('button','pri','Cambiar mis respuestas');b1.onclick=()=>{paso='par';render()};
+    const b2=el('button','link','Cambiar mi perfil');b2.onclick=()=>{paso='genero';render()};
+    r.append(b1,b2);wrap.append(r);
+  }
+  p.append(wrap);
+}
+render();cargar().then(render);
+setInterval(()=>{cargar().then(render)},15000);
+</script>
+</body></html>
